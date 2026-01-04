@@ -1,0 +1,82 @@
+#!/bin/bash
+set -e
+
+# Add MA Service script, create link file
+if [ -d "/usr/lib/x86_64-linux-gnu/ModemManager" ]; then
+    if [ -d "/opt/rolling/rolling_ma_service/fcc-unlock.d" ]; then
+        cp -raf /opt/rolling/rolling_ma_service/fcc-unlock.d /usr/lib/x86_64-linux-gnu/ModemManager/
+        chown -R root:root /usr/lib/x86_64-linux-gnu/ModemManager/fcc-unlock.d
+        chmod 755 -R /usr/lib/x86_64-linux-gnu/ModemManager/fcc-unlock.d
+    fi
+elif [ -d "/usr/lib64/ModemManager" ]; then
+    if [ -d "/opt/rolling/rolling_ma_service/fcc-unlock.d" ]; then
+        cp -raf /opt/rolling/rolling_ma_service/fcc-unlock.d /usr/lib64/ModemManager/
+        chown -R root:root /usr/lib64/ModemManager/fcc-unlock.d
+        chmod 755 -R /usr/lib64/ModemManager/fcc-unlock.d
+    fi
+else
+    echo "No ModemManager directory found!"
+fi
+
+if [ -d "/opt/rolling/rolling_config_service" ]; then
+    mkdir -p /etc/opt/rolling/config_file/rolling_config_service/
+    mv /opt/rolling/rolling_config_service/*.ini /etc/opt/rolling/config_file/rolling_config_service/
+fi
+
+if [ -d "/opt/rolling/rolling_flash_service" ]; then
+    mkdir -p /etc/opt/rolling/config_file/rolling_flash_service/
+    mv /opt/rolling/rolling_flash_service/*.ini /etc/opt/rolling/config_file/rolling_flash_service/
+fi
+
+mkdir -p /etc/opt/rolling/run
+mkdir -p /etc/opt/rolling/rolling_fw_pkg/
+
+function start_service()
+{
+    path="/lib/systemd/system/"
+    if [[ -f ${path}rolling_config.service && -f ${path}rolling_flash.service && -f ${path}rolling_helper.service ]]; then
+        systemctl enable rolling_config.service rolling_flash.service rolling_helper.service
+        systemctl start rolling_helper.service rolling_config.service rolling_flash.service
+    fi
+}
+
+function modify_fwupd_quirk()
+{
+    local cmd1="grep -qF \"[USB\VID_33F8&PID_0301]\" /usr/share/fwupd/quirks.d/builtin.quirk"
+    local cmd2="grep -qF \"[USB\VID_33F8&PID_0302]\" /usr/share/fwupd/quirks.d/builtin.quirk"
+    local cmd3="grep -qF \"[USB\VID_33F8&PID_D00D]\" /usr/share/fwupd/quirks.d/builtin.quirk"
+    gunzip /usr/share/fwupd/quirks.d/builtin.quirk.gz
+    if ! eval "$cmd3"; then
+        echo "
+[USB\VID_33F8&PID_D00D]
+Plugin = fastboot
+FastbootBlockSize = 16384
+FastbootOperationDelay = 0
+Summary = Rolling RW101 Modem (fastboot)
+CounterpartGuid = USB\VID_33F8&PID_0301
+CounterpartGuid = USB\VID_33F8&PID_0302" >> /usr/share/fwupd/quirks.d/builtin.quirk
+    fi
+
+    if ! eval "$cmd2"; then
+        echo "
+[USB\VID_33F8&PID_0302]
+GType = FuMmFastbootDevice
+Summary = Rollingwireless RW101-GL Module
+Flags = uninhibit-modemmanager-after-fastboot-reboot,detach-at-fastboot-has-no-response
+CounterpartGuid = USB\VID_33F8&PID_D00D" >> /usr/share/fwupd/quirks.d/builtin.quirk
+    fi
+
+    if ! eval "$cmd1"; then
+        echo "
+[USB\VID_33F8&PID_0301]
+GType = FuMmFastbootDevice
+Summary = Rollingwireless RW101-GL Module
+Flags = uninhibit-modemmanager-after-fastboot-reboot,detach-at-fastboot-has-no-response
+CounterpartGuid = USB\VID_33F8&PID_D00D" >> /usr/share/fwupd/quirks.d/builtin.quirk
+    fi
+
+    gzip /usr/share/fwupd/quirks.d/builtin.quirk
+    systemctl restart fwupd
+}
+modify_fwupd_quirk
+start_service
