@@ -15,7 +15,7 @@ The `rolling_flash`, `rolling_config`, `rolling_helper` binaries are LGPL-2.0.
 - Verified on **Ubuntu 24.04**. Fedora is in testing; other OS versions are unverified.
 
 ## 1) Build using `setup.sh`
-From the `linux-apps/` directory:
+From repo root:
 
 ```bash
 cd linux-apps
