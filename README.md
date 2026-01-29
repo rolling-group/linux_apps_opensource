@@ -1,12 +1,11 @@
 # Rolling Linux apps
 This is a Rolling linux apps set project for wwan devices.<br>
   **Flash service:** firmware update, switch, recovery.<br>
-  **Ma service:** fccunlock(It is not open source).<br>
   **Config service:** OEM configuration function.<br>
   **Helper service:** provider dbus API for Flash/Ma/Config service.<br>
 
 # License
-The rolling_flash rolling_config  rolling_helper binaries are both LGPL 2.0, and rolling_ma_service is MIT.<br>
+The rolling_flash rolling_config rolling_helper binaries are both LGPL 2.0.<br>
 
 # Notice
   - Service must be used with fw_package. Before installing service, ensure that fw_package has been installed. Obtain the fw package from the corresponding OEM .<br>
