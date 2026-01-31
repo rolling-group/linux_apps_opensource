@@ -56,6 +56,13 @@ The rolling_flash rolling_config rolling_helper binaries are both LGPL 2.0.<br>
 - Stop service<br>
 	sudo systemctl stop rolling_xxx.service<br>
 
+## 4. 关于安装时未拷贝项的说明（setup.sh）
+
+使用 `setup.sh` 构建后，会将 `service/` 下文件拷贝到系统目录，以下两项**不会拷贝**：
+
+- **udev rules 文件（usr/lib/udev/）**：不拷贝是因为 ModemManager 里已经包含了这些 rules 的内容，无需重复安装。
+- **env.conf（lib/systemd/system/rolling_*.d/env.conf）**：其内容是设置环境变量路径（如 LD_LIBRARY_PATH），但当前并未使用该路径下的库文件，因此不需要。
+
 # release history
 - version:1.0.0<br>
   first version, upload to github.<br>

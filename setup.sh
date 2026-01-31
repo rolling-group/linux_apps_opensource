@@ -119,3 +119,37 @@ rm -rf "${SERVICE_DIR}"
 mkdir -p "${SERVICE_DIR}"
 cp -a "${DPKG_DIR}"/* "${SERVICE_DIR}/"
 log "Done. Service files (ready to package) are in: ${SERVICE_DIR}/"
+
+# Copy service/ to system (excluding usr/lib/udev and rolling_*.d/env.conf)
+# Requires root; uses sudo when not running as root.
+SUDO=""
+[[ "${EUID}" -ne 0 ]] && SUDO="sudo"
+log "Copying service files to system (excluding usr/lib/udev and rolling_*.d/env.conf)..."
+if [[ -d "${SERVICE_DIR}/opt" ]]; then
+  ${SUDO} mkdir -p /opt
+  ${SUDO} cp -a "${SERVICE_DIR}/opt"/* /opt/
+fi
+if [[ -d "${SERVICE_DIR}/lib" ]]; then
+  ${SUDO} mkdir -p /lib
+  ${SUDO} cp -a "${SERVICE_DIR}/lib"/* /lib/
+  for drop in rolling_config.d/env.conf rolling_flash.d/env.conf rolling_helper.d/env.conf; do
+    ${SUDO} rm -f "/lib/systemd/system/${drop}"
+  done
+fi
+if [[ -d "${SERVICE_DIR}/usr" ]]; then
+  ${SUDO} mkdir -p /usr
+  # Copy usr but skip usr/lib/udev entirely
+  if [[ -d "${SERVICE_DIR}/usr/share" ]]; then
+    ${SUDO} mkdir -p /usr/share
+    ${SUDO} cp -a "${SERVICE_DIR}/usr/share"/* /usr/share/
+  fi
+  if [[ -d "${SERVICE_DIR}/usr/lib" ]]; then
+    ${SUDO} mkdir -p /usr/lib
+    for item in "${SERVICE_DIR}/usr/lib"/*; do
+      [[ -e "${item}" ]] || continue
+      [[ "$(basename "${item}")" == "udev" ]] && continue
+      ${SUDO} cp -a "${item}" /usr/lib/
+    done
+  fi
+fi
+log "Service files copied to system (usr/lib/udev and rolling_*.d/env.conf skipped)."
